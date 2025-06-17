@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Rastreador - SMSMarket</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: #007bff;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #007bff;
+    }
+
+    .section h3 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 12px 15px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: left;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-warning {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .btn-info {
+      background: #17a2b8;
+      color: white;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-box {
+      background: #e7f3ff;
+      border: 1px solid #bee5eb;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+      min-height: 50px;
+    }
+
+    .result-box.success {
+      background: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+
+    .result-box.error {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+
+    .saldo-info {
+      background: #28a745;
+      color: white;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .msg-item {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .msg-header {
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 10px;
+    }
+
+    .msg-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .datetime-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .cmd-description {
+      font-size: 11px;
+      color: #6c757d;
+      margin-top: 3px;
+    }
+
+    @media (max-width: 768px) {
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .datetime-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛰️ Controle de Rastreador</h1>
+      <p>Comandos SMS via SMSMarket</p>
+    </div>
+
+    <div class="content">
+      <!-- Saldo -->
+      <div id="saldoInfo" class="saldo-info" style="display: none;">
+        <h3>💰 Saldo Atual</h3>
+        <div id="saldoValor">Carregando...</div>
+      </div>
+
+      <!-- Configuração -->
+      <div class="section">
+        <h3>📱 Configuração do Chip</h3>
+        <div class="input-group">
+          <label for="numero">Número do chip (com DDD):</label>
+          <input type="tel" id="numero" placeholder="ex: 85999998888" maxlength="11" />
+        </div>
+        <button class="btn-info" onclick="consultarSaldo()">💰 Consultar Saldo</button>
+      </div>
+
+      <!-- Comandos Específicos -->
+      <div class="section">
+        <h3>⚡ Comandos do Rastreador</h3>
+        
+        <div class="button-grid">
+          <button class="btn-primary" onclick="enviarComando('fuso')">
+            🌍 Definir Fuso
+            <div class="cmd-description">GMT,W,0,0#</div>
+          </button>
+          
+          <button class="btn-success" onclick="enviarComando('apn_vivo')">
+            📶 Definir APN
+            <div class="cmd-description">APN,wl.vivo.com.br,vivo,vivo#</div>
+          </button>
+          
+          <button class="btn-primary" onclick="enviarComando('servidor')">
+            🖥️ Definir Servidor
+            <div class="cmd-description">SERVER,0,144.202.13.234,6809,0#</div>
+          </button>
+          
+          <button class="btn-warning" onclick="enviarComando('intervalo')">
+            ⏰ Intervalo Atualização
+            <div class="cmd-description">TIMER,30,3600#</div>
+          </button>
+          
+          <button class="btn-info" onclick="enviarComando('voltagem')">
+            🔋 Voltagem
+            <div class="cmd-description">SZCS#GT06SEL=1#GT06IEXVOL=2</div>
+          </button>
+          
+          <button class="btn-info" onclick="enviarComando('ignicao')">
+            🔑 Ignição Virtual
+            <div class="cmd-description">SZCS#ACCLINE=0</div>
+          </button>
+          
+          <button class="btn-warning" onclick="enviarComando('gps_parado')">
+            📡 Desativar GPS Parado
+            <div class="cmd-description">SZCS#GPS_DISSLP=0</div>
+          </button>
+          
+          <button class="btn-info" onclick="enviarComando('economia_sms')">
+            💾 Economia SMS
+            <div class="cmd-description">SZCS#SLPDISCONNECT=2</div>
+          </button>
+          
+          <button class="btn-warning" onclick="enviarComando('reiniciar')">
+            🔄 Reiniciar Meia-Noite
+            <div class="cmd-description">SZCS#TIMING_RESET=1</div>
+          </button>
+          
+          <button class="btn-success" onclick="enviarComando('km')">
+            📏 Ativar KM
+            <div class="cmd-description">SZCS#GT06SEL=1#GT06METER=0</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Comando Personalizado -->
+      <div class="section">
+        <h3>✏️ Comando Personalizado</h3>
+        <div class="input-group">
+          <label for="comandoCustom">Digite o comando SMS:</label>
+          <textarea id="comandoCustom" rows="3" placeholder="ex: WHERE# ou GPS,1,1800#"></textarea>
+        </div>
+        <button class="btn-primary" onclick="enviarComandoCustom()">📤 Enviar Comando</button>
+      </div>
+
+      <!-- Consulta por Período -->
+      <div class="section">
+        <h3>📊 Consulta por Período</h3>
+        <div class="datetime-row">
+          <div class="input-group">
+            <label for="startDate">Data Início:</label>
+            <input type="datetime-local" id="startDate" />
+          </div>
+          <div class="input-group">
+            <label for="endDate">Data Fim:</label>
+            <input type="datetime-local" id="endDate" />
+          </div>
+        </div>
+        <button class="btn-success" onclick="consultarPeriodo()">📈 Consultar Status</button>
+      </div>
+
+      <!-- Resultado dos Comandos -->
+      <div class="result-box" id="resultado">
+        <strong>ℹ️ Status:</strong> Aguardando comando...
+      </div>
+
+      <!-- Resultados da Consulta -->
+      <div id="consultaResultados"></div>
+    </div>
+  </div>
+
+  <script>
+    // Configurar datas padrão (últimas 24 horas)
+    window.onload = function() {
+      const agora = new Date();
+      const ontem = new Date(agora.getTime() - 24 * 60 * 60 * 1000);
+      
+      document.getElementById('endDate').value = formatDateTime(agora);
+      document.getElementById('startDate').value = formatDateTime(ontem);
+    };
+
+    function formatDateTime(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function mostrarLoading(elemento) {
+      elemento.innerHTML = '<span class="loading"></span> Processando...';
+      elemento.className = 'result-box';
+    }
+
+    function mostrarSucesso(elemento, mensagem) {
+      elemento.innerHTML = mensagem;
+      elemento.className = 'result-box success';
+    }
+
+    function mostrarErro(elemento, mensagem) {
+      elemento.innerHTML = `❌ ${mensagem}`;
+      elemento.className = 'result-box error';
+    }
+
+    async function enviarComando(comando) {
+      const numero = document.getElementById('numero').value;
+      const resultado = document.getElementById('resultado');
+
+      if (!numero) {
+        mostrarErro(resultado, 'Digite o número do chip primeiro!');
+        return;
+      }
+
+      mostrarLoading(resultado);
+
+      try {
+        const response = await fetch('/api/enviar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numero, comando })
+        });
+
+        const data = await response.json();
+
+        if (data.sucesso) {
+          const info = `
+            ✅ <strong>Comando enviado!</strong><br>
+            📱 <strong>Número:</strong> ${data.numero}<br>
+            📝 <strong>Comando:</strong> ${data.mensagem}<br>
+            🆔 <strong>ID:</strong> ${data.dados.id || 'N/A'}<br>
+            📊 <strong>Status:</strong> ${data.dados.responseDescription || 'Enviado'}
+          `;
+          mostrarSucesso(resultado, info);
+        } else {
+          mostrarErro(resultado, data.erro || 'Erro desconhecido');
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        mostrarErro(resultado, 'Erro de conexão');
+      }
+    }
+
+    async function enviarComandoCustom() {
+      const numero = document.getElementById('numero').value;
+      const mensagem_custom = document.getElementById('comandoCustom').value;
+      const resultado = document.getElementById('resultado');
+
+      if (!numero) {
+        mostrarErro(resultado, 'Digite o número do chip primeiro!');
+        return;
+      }
+
+      if (!mensagem_custom) {
+        mostrarErro(resultado, 'Digite o comando personalizado!');
+        return;
+      }
+
+      mostrarLoading(resultado);
+
+      try {
+        const response = await fetch('/api/enviar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numero, mensagem_custom })
+        });
+
+        const data = await response.json();
+
+        if (data.sucesso) {
+          const info = `
+            ✅ <strong>Comando personalizado enviado!</strong><br>
+            📱 <strong>Número:</strong> ${data.numero}<br>
+            📝 <strong>Comando:</strong> ${data.mensagem}<br>
+            🆔 <strong>ID:</strong> ${data.dados.id || 'N/A'}<br>
+            📊 <strong>Status:</strong> ${data.dados.responseDescription || 'Enviado'}
+          `;
+          mostrarSucesso(resultado, info);
+          document.getElementById('comandoCustom').value = '';
+        } else {
+          mostrarErro(resultado, data.erro || 'Erro desconhecido');
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        mostrarErro(resultado, 'Erro de conexão');
+      }
+    }
+
+    async function consultarSaldo() {
+      const saldoInfo = document.getElementById('saldoInfo');
+      const saldoValor = document.getElementById('saldoValor');
+
+      saldoValor.innerHTML = '<span class="loading"></span> Consultando...';
+      saldoInfo.style.display = 'block';
+
+      try {
+        const response = await fetch('/api/saldo');
+        const data = await response.json();
+
+        if (data.success) {
+          saldoValor.innerHTML = `
+            <strong>SMS:</strong> R$ ${data.balance_1 || '0'} | 
+            <strong>SMS Interativo:</strong> R$ ${data.balance_2 || '0'}<br>
+            <small>Vencimento: ${data.expiration || 'N/A'}</small>
+          `;
+        } else {
+          saldoValor.innerHTML = '❌ Erro ao consultar saldo';
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        saldoValor.innerHTML = '❌ Erro de conexão';
+      }
+    }
+
+    async function consultarPeriodo() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const container = document.getElementById('consultaResultados');
+
+      if (!startDate || !endDate) {
+        mostrarErro(container, 'Defina as datas de início e fim');
+        return;
+      }
+
+      container.innerHTML = '<div class="result-box"><span class="loading"></span> Consultando período...</div>';
+
+      try {
+        const response = await fetch('/api/status/periodo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ start_date: startDate, end_date: endDate })
+        });
+
+        const data = await response.json();
+
+        if (data && data.messages && data.messages.length > 0) {
+          let html = `
+            <div class="section">
+              <h3>📊 Resultados do Período</h3>
+              <p><strong>Total de mensagens:</strong> ${data.messages.length}</p>
+            </div>
+          `;
+
+          data.messages.forEach((msg, index) => {
+            const status = interpretarStatus(msg.status);
+            const data_msg = new Date(msg.date).toLocaleString('pt-BR');
+            
+            html += `
+              <div class="msg-item">
+                <div class="msg-header">#${index + 1} - ${data_msg}</div>
+                <div class="msg-info">
+                  <div><strong>Número:</strong> ${msg.number || '---'}</div>
+                  <div><strong>Status:</strong> ${msg.status}</div>
+                  <div><strong>ID:</strong> ${msg.id || '---'}</div>
+                  <div><strong>Operadora:</strong> ${msg.carrier || '---'}</div>
+                </div>
+                <div><strong>Mensagem:</strong> ${msg.content || '---'}</div>
+                <div style="margin-top: 10px;">
+                  <span class="status-badge ${status.classe}">
+                    ${status.emoji} ${status.texto}
+                  </span>
+                </div>
+              </div>
+            `;
+          });
+
+          container.innerHTML = html;
+        } else {
+          container.innerHTML = `
+            <div class="result-box">
+              ℹ️ Nenhuma mensagem encontrada no período.
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        mostrarErro(container, 'Erro ao consultar período');
+      }
+    }
+
+    function interpretarStatus(status) {
+      const statusMap = {
+        1: { emoji: '✅', texto: 'Entregue no celular', classe: 'status-success' },
+        0: { emoji: '🕓', texto: 'Entregue à operadora', classe: 'status-pending' },
+        9: { emoji: '❌', texto: 'Não entregue', classe: 'status-error' },
+        '-1': { emoji: '📤', texto: 'Na fila', classe: 'status-pending' },
+        '-3': { emoji: '🚫', texto: 'Número inválido', classe: 'status-error' },
+        '-4': { emoji: '📞', texto: 'Número fixo', classe: 'status-error' },
+        '-5': { emoji: '🚫', texto: 'Lista negra', classe: 'status-error' }
+      };
+      
+      return statusMap[status.toString()] || { 
+        emoji: '❓', 
+        texto: `Status ${status}`, 
+        classe: 'status-pending' 
+      };
+    }
+  </script>
+</body>
+</html>
