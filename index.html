@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Controle de Rastreador - SMSMarket</title>
+  <title>Sistema de Envio de SMS - Rastro</title>
   <style>
     * {
       margin: 0;
@@ -12,203 +12,282 @@
     }
 
     body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
       padding: 20px;
+      min-height: 100vh;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 600px;
       margin: 0 auto;
-      background: white;
+      background: #ecf0f1;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
     .header {
-      background: #007bff;
+      background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
       color: white;
       padding: 20px;
       text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .content {
-      padding: 30px;
+      padding: 25px;
     }
 
     .section {
-      margin-bottom: 30px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border-left: 4px solid #007bff;
+      margin-bottom: 20px;
     }
 
-    .section h3 {
-      margin-bottom: 15px;
-      color: #333;
+    /* Seção Saldo */
+    .saldo-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 25px;
     }
 
-    .input-group {
-      margin-bottom: 15px;
+    .btn-consultar-saldo {
+      background: linear-gradient(135deg, #16a085 0%, #138d75 100%);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
     }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #555;
+    .btn-consultar-saldo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
-    input, textarea {
+    .saldo-display {
+      background: #27ae60;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: 600;
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Campo Números */
+    .numeros-section {
+      margin-bottom: 25px;
+    }
+
+    .input-numeros {
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
+      padding: 15px;
+      border: 2px solid #bdc3c7;
       border-radius: 5px;
       font-size: 16px;
+      text-align: center;
+      color: #2c3e50;
+      background: white;
     }
 
-    textarea {
-      resize: vertical;
-      font-family: monospace;
-    }
-
-    input:focus, textarea:focus {
+    .input-numeros:focus {
       outline: none;
-      border-color: #007bff;
+      border-color: #c0392b;
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1);
     }
 
-    .button-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin-top: 15px;
+    .input-help {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-align: center;
+      margin-top: 8px;
+      font-style: italic;
     }
 
-    button {
-      padding: 12px 15px;
+    /* Comandos */
+    .comandos-section {
+      margin-bottom: 25px;
+    }
+
+    .comando-btn {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 10px;
       border: none;
       border-radius: 5px;
       font-size: 14px;
-      font-weight: bold;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
       text-align: left;
+      position: relative;
     }
 
-    .btn-primary {
-      background: #007bff;
-      color: white;
-    }
-
-    .btn-success {
-      background: #28a745;
-      color: white;
-    }
-
-    .btn-warning {
-      background: #ffc107;
-      color: #212529;
-    }
-
-    .btn-info {
-      background: #17a2b8;
-      color: white;
-    }
-
-    button:hover {
+    .comando-btn:hover {
       transform: translateY(-2px);
-      opacity: 0.9;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
 
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .result-box {
-      background: #e7f3ff;
-      border: 1px solid #bee5eb;
-      border-radius: 5px;
-      padding: 15px;
-      margin-top: 15px;
-      min-height: 50px;
-    }
-
-    .result-box.success {
-      background: #d4edda;
-      border-color: #c3e6cb;
-      color: #155724;
-    }
-
-    .result-box.error {
-      background: #f8d7da;
-      border-color: #f5c6cb;
-      color: #721c24;
-    }
-
-    .saldo-info {
-      background: #28a745;
+    .comando-btn.ativo {
+      background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
       color: white;
-      padding: 15px;
-      border-radius: 5px;
-      margin-bottom: 20px;
-      text-align: center;
+      border: 2px solid #1e8449;
     }
 
-    .msg-item {
+    .comando-btn.normal {
+      background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+      color: white;
+    }
+
+    .comando-btn.perigo {
+      background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+      color: white;
+    }
+
+    .cmd-description {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 5px;
+      font-family: 'Courier New', monospace;
+      background: rgba(0,0,0,0.1);
+      padding: 4px 8px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* Comando Personalizado */
+    .custom-section {
       background: white;
-      border: 1px solid #ddd;
+      padding: 20px;
       border-radius: 5px;
-      padding: 15px;
-      margin-bottom: 10px;
+      border: 1px solid #bdc3c7;
+      margin-bottom: 25px;
     }
 
-    .msg-header {
-      font-weight: bold;
-      color: #007bff;
-      margin-bottom: 10px;
+    .custom-section h4 {
+      margin-bottom: 15px;
+      color: #2c3e50;
     }
 
-    .msg-info {
+    .custom-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #bdc3c7;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 15px;
+    }
+
+    .custom-textarea:focus {
+      outline: none;
+      border-color: #c0392b;
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1);
+    }
+
+    .btn-enviar {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .btn-enviar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Consulta Período */
+    .periodo-section {
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      border: 1px solid #bdc3c7;
+      margin-bottom: 25px;
+    }
+
+    .periodo-section h4 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .datetime-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .datetime-input {
+      padding: 10px;
+      border: 2px solid #bdc3c7;
+      border-radius: 5px;
       font-size: 14px;
     }
 
-    .status-badge {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 15px;
-      font-size: 12px;
-      font-weight: bold;
+    .datetime-input:focus {
+      outline: none;
+      border-color: #c0392b;
     }
 
-    .status-success {
-      background: #d4edda;
-      color: #155724;
+    .btn-consultar {
+      background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
     }
 
-    .status-pending {
-      background: #fff3cd;
-      color: #856404;
+    .btn-consultar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
-    .status-error {
-      background: #f8d7da;
-      color: #721c24;
+    /* Resultado */
+    .result-box {
+      background: white;
+      border: 2px solid #bdc3c7;
+      border-radius: 5px;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 60px;
+    }
+
+    .result-box.success {
+      background: #d5f4e6;
+      border-color: #27ae60;
+      color: #1e8449;
+    }
+
+    .result-box.error {
+      background: #fadbd8;
+      border-color: #c0392b;
+      color: #a93226;
     }
 
     .loading {
       display: inline-block;
       width: 20px;
       height: 20px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #007bff;
+      border: 3px solid #ecf0f1;
+      border-top: 3px solid #c0392b;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -218,20 +297,45 @@
       100% { transform: rotate(360deg); }
     }
 
-    .datetime-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
+    .msg-item {
+      background: white;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 10px;
     }
 
-    .cmd-description {
-      font-size: 11px;
-      color: #6c757d;
-      margin-top: 3px;
+    .msg-header {
+      font-weight: 600;
+      color: #c0392b;
+      margin-bottom: 10px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-success {
+      background: #d5f4e6;
+      color: #1e8449;
+    }
+
+    .status-pending {
+      background: #fef9e7;
+      color: #b7950b;
+    }
+
+    .status-error {
+      background: #fadbd8;
+      color: #a93226;
     }
 
     @media (max-width: 768px) {
-      .button-grid {
+      .saldo-section {
         grid-template-columns: 1fr;
       }
       
@@ -240,7 +344,7 @@
       }
       
       .content {
-        padding: 20px;
+        padding: 15px;
       }
     }
   </style>
@@ -248,113 +352,130 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🛰️ Controle de Rastreador</h1>
-      <p>Comandos SMS via SMSMarket</p>
+      Sistema de Envio de SMS - Rastro
     </div>
 
     <div class="content">
-      <!-- Saldo -->
-      <div id="saldoInfo" class="saldo-info" style="display: none;">
-        <h3>💰 Saldo Atual</h3>
-        <div id="saldoValor">Carregando...</div>
+      <!-- Seção Saldo -->
+      <div class="saldo-section">
+        <button class="btn-consultar-saldo" onclick="consultarSaldo()">
+          Consultar Saldo
+        </button>
+        <div class="saldo-display" id="saldoDisplay">
+          Aqui mostra o saldo
+        </div>
       </div>
 
-      <!-- Configuração -->
-      <div class="section">
-        <h3>📱 Configuração do Chip</h3>
-        <div class="input-group">
-          <label for="numero">Número do chip (com DDD):</label>
-          <input type="tel" id="numero" placeholder="ex: 85999998888" maxlength="11" />
+      <!-- Campo Números -->
+      <div class="numeros-section">
+        <input 
+          type="text" 
+          class="input-numeros" 
+          id="numero" 
+          placeholder="Insira aqui os números"
+        />
+        <div class="input-help">
+          Para múltiplos números, separe por vírgula (ex: 85999998888,85988887777)
         </div>
-        <button class="btn-info" onclick="consultarSaldo()">💰 Consultar Saldo</button>
       </div>
 
-      <!-- Comandos Específicos -->
-      <div class="section">
-        <h3>⚡ Comandos do Rastreador</h3>
-        
-        <div class="button-grid">
-          <button class="btn-primary" onclick="enviarComando('fuso')">
-            🌍 Definir Fuso
-            <div class="cmd-description">GMT,W,0,0#</div>
-          </button>
-          
-          <button class="btn-success" onclick="enviarComando('apn_vivo')">
-            📶 Definir APN
-            <div class="cmd-description">APN,wl.vivo.com.br,vivo,vivo#</div>
-          </button>
-          
-          <button class="btn-primary" onclick="enviarComando('servidor')">
-            🖥️ Definir Servidor
-            <div class="cmd-description">SERVER,0,144.202.13.234,6809,0#</div>
-          </button>
-          
-          <button class="btn-warning" onclick="enviarComando('intervalo')">
-            ⏰ Intervalo Atualização
-            <div class="cmd-description">TIMER,30,3600#</div>
-          </button>
-          
-          <button class="btn-info" onclick="enviarComando('voltagem')">
-            🔋 Voltagem
-            <div class="cmd-description">SZCS#GT06SEL=1#GT06IEXVOL=2</div>
-          </button>
-          
-          <button class="btn-info" onclick="enviarComando('ignicao')">
-            🔑 Ignição Virtual
-            <div class="cmd-description">SZCS#ACCLINE=0</div>
-          </button>
-          
-          <button class="btn-warning" onclick="enviarComando('gps_parado')">
-            📡 Desativar GPS Parado
-            <div class="cmd-description">SZCS#GPS_DISSLP=0</div>
-          </button>
-          
-          <button class="btn-info" onclick="enviarComando('economia_sms')">
-            💾 Economia SMS
-            <div class="cmd-description">SZCS#SLPDISCONNECT=2</div>
-          </button>
-          
-          <button class="btn-warning" onclick="enviarComando('reiniciar')">
-            🔄 Reiniciar Meia-Noite
-            <div class="cmd-description">SZCS#TIMING_RESET=1</div>
-          </button>
-          
-          <button class="btn-success" onclick="enviarComando('km')">
-            📏 Ativar KM
-            <div class="cmd-description">SZCS#GT06SEL=1#GT06METER=0</div>
-          </button>
-        </div>
+      <!-- Comandos -->
+      <div class="comandos-section">
+        <button class="comando-btn ativo" onclick="enviarComando('fuso')">
+          🌍 Definir Fuso Horário
+          <div class="cmd-description">GMT,W,0,0#</div>
+        </button>
+
+        <button class="comando-btn ativo" onclick="enviarComando('apn_vivo')">
+          📶 Configurar APN Vivo
+          <div class="cmd-description">APN,wl.vivo.com.br,vivo,vivo#</div>
+        </button>
+
+        <button class="comando-btn ativo" onclick="enviarComando('servidor')">
+          🖥️ Definir Servidor
+          <div class="cmd-description">SERVER,0,144.202.13.234,6809,0#</div>
+        </button>
+
+        <button class="comando-btn normal" onclick="enviarComando('intervalo')">
+          ⏰ Intervalo de Atualização
+          <div class="cmd-description">TIMER,30,3600#</div>
+        </button>
+
+        <button class="comando-btn normal" onclick="enviarComando('voltagem')">
+          🔋 Configurar Voltagem
+          <div class="cmd-description">SZCS#GT06SEL=1#GT06IEXVOL=2</div>
+        </button>
+
+        <button class="comando-btn normal" onclick="enviarComando('ignicao')">
+          🔑 Ignição Virtual
+          <div class="cmd-description">SZCS#ACCLINE=0</div>
+        </button>
+
+        <button class="comando-btn ativo" onclick="enviarComando('modo_sleep')">
+          🛌 Habilitar Modo Sleep (Moto)
+          <div class="cmd-description">SZCS#SLPDISCONNECT=1</div>
+        </button>
+
+        <button class="comando-btn ativo" onclick="enviarComando('economia_bateria_on')">
+          🔋💚 Ativar Economia de Bateria
+          <div class="cmd-description">SZCS#GPS_DISSLP=0</div>
+        </button>
+
+        <button class="comando-btn normal" onclick="enviarComando('economia_bateria_off')">
+          🔋🔴 Desativar Economia de Bateria
+          <div class="cmd-description">SZCS#GPS_DISSLP=1</div>
+        </button>
+
+        <button class="comando-btn normal" onclick="enviarComando('reiniciar')">
+          🔄 Reiniciar à Meia-Noite
+          <div class="cmd-description">SZCS#TIMING_RESET=1</div>
+        </button>
+
+        <button class="comando-btn ativo" onclick="enviarComando('km')">
+          📏 Ativar Contador KM
+          <div class="cmd-description">SZCS#GT06SEL=1#GT06METER=0</div>
+        </button>
+
+        <button class="comando-btn perigo" onclick="enviarComando('modo_offline')">
+          📵 Modo Offline Completo
+          <div class="cmd-description">SZCS#MTK_DISSLP=0</div>
+        </button>
+
+        <button class="comando-btn perigo" onclick="enviarComando('reset')">
+          🔄 RESET Completo
+          <div class="cmd-description">RESET#</div>
+        </button>
       </div>
 
       <!-- Comando Personalizado -->
-      <div class="section">
-        <h3>✏️ Comando Personalizado</h3>
-        <div class="input-group">
-          <label for="comandoCustom">Digite o comando SMS:</label>
-          <textarea id="comandoCustom" rows="3" placeholder="ex: WHERE# ou GPS,1,1800#"></textarea>
-        </div>
-        <button class="btn-primary" onclick="enviarComandoCustom()">📤 Enviar Comando</button>
+      <div class="custom-section">
+        <h4>Campo Comando Personalizado</h4>
+        <textarea 
+          class="custom-textarea" 
+          id="comandoCustom" 
+          rows="3" 
+          placeholder="Digite aqui seu comando personalizado (ex: WHERE# ou GPS,1,1800#)"
+        ></textarea>
+        <button class="btn-enviar" onclick="enviarComandoCustom()">
+          Enviar
+        </button>
       </div>
 
-      <!-- Consulta por Período -->
-      <div class="section">
-        <h3>📊 Consulta por Período</h3>
+      <!-- Consulta de Período -->
+      <div class="periodo-section">
+        <h4>Consulta de Período (como está mesmo)</h4>
         <div class="datetime-row">
-          <div class="input-group">
-            <label for="startDate">Data Início:</label>
-            <input type="datetime-local" id="startDate" />
-          </div>
-          <div class="input-group">
-            <label for="endDate">Data Fim:</label>
-            <input type="datetime-local" id="endDate" />
-          </div>
+          <input type="datetime-local" class="datetime-input" id="startDate" />
+          <input type="datetime-local" class="datetime-input" id="endDate" />
         </div>
-        <button class="btn-success" onclick="consultarPeriodo()">📈 Consultar Status</button>
+        <button class="btn-consultar" onclick="consultarPeriodo()">
+          Consultar Status
+        </button>
       </div>
 
-      <!-- Resultado dos Comandos -->
+      <!-- Resultado -->
       <div class="result-box" id="resultado">
-        <strong>ℹ️ Status:</strong> Aguardando comando...
+        <strong>Status:</strong> Aguardando comando...
       </div>
 
       <!-- Resultados da Consulta -->
@@ -397,34 +518,45 @@
       elemento.className = 'result-box error';
     }
 
+    function processarNumeros(numeroInput) {
+      return numeroInput
+        .split(',')
+        .map(num => num.trim())
+        .filter(num => num.length > 0);
+    }
+
     async function enviarComando(comando) {
-      const numero = document.getElementById('numero').value;
+      const numeroInput = document.getElementById('numero').value;
       const resultado = document.getElementById('resultado');
 
-      if (!numero) {
-        mostrarErro(resultado, 'Digite o número do chip primeiro!');
+      if (!numeroInput.trim()) {
+        mostrarErro(resultado, 'Digite o(s) número(s) do chip primeiro!');
         return;
       }
 
+      const numeros = processarNumeros(numeroInput);
       mostrarLoading(resultado);
 
       try {
         const response = await fetch('/api/enviar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ numero, comando })
+          body: JSON.stringify({ numeros, comando })
         });
 
         const data = await response.json();
 
         if (data.sucesso) {
-          const info = `
-            ✅ <strong>Comando enviado!</strong><br>
-            📱 <strong>Número:</strong> ${data.numero}<br>
-            📝 <strong>Comando:</strong> ${data.mensagem}<br>
-            🆔 <strong>ID:</strong> ${data.dados.id || 'N/A'}<br>
-            📊 <strong>Status:</strong> ${data.dados.responseDescription || 'Enviado'}
-          `;
+          let info = '✅ <strong>Comando enviado!</strong><br>';
+          
+          if (data.resultados) {
+            data.resultados.forEach((resultado) => {
+              const status = resultado.sucesso ? '✅' : '❌';
+              info += `${status} <strong>${resultado.numero}:</strong> ${resultado.status}<br>`;
+            });
+          }
+          
+          info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
           mostrarSucesso(resultado, info);
         } else {
           mostrarErro(resultado, data.erro || 'Erro desconhecido');
@@ -436,39 +568,43 @@
     }
 
     async function enviarComandoCustom() {
-      const numero = document.getElementById('numero').value;
+      const numeroInput = document.getElementById('numero').value;
       const mensagem_custom = document.getElementById('comandoCustom').value;
       const resultado = document.getElementById('resultado');
 
-      if (!numero) {
-        mostrarErro(resultado, 'Digite o número do chip primeiro!');
+      if (!numeroInput.trim()) {
+        mostrarErro(resultado, 'Digite o(s) número(s) do chip primeiro!');
         return;
       }
 
-      if (!mensagem_custom) {
+      if (!mensagem_custom.trim()) {
         mostrarErro(resultado, 'Digite o comando personalizado!');
         return;
       }
 
+      const numeros = processarNumeros(numeroInput);
       mostrarLoading(resultado);
 
       try {
         const response = await fetch('/api/enviar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ numero, mensagem_custom })
+          body: JSON.stringify({ numeros, mensagem_custom })
         });
 
         const data = await response.json();
 
         if (data.sucesso) {
-          const info = `
-            ✅ <strong>Comando personalizado enviado!</strong><br>
-            📱 <strong>Número:</strong> ${data.numero}<br>
-            📝 <strong>Comando:</strong> ${data.mensagem}<br>
-            🆔 <strong>ID:</strong> ${data.dados.id || 'N/A'}<br>
-            📊 <strong>Status:</strong> ${data.dados.responseDescription || 'Enviado'}
-          `;
+          let info = '✅ <strong>Comando personalizado enviado!</strong><br>';
+          
+          if (data.resultados) {
+            data.resultados.forEach((resultado) => {
+              const status = resultado.sucesso ? '✅' : '❌';
+              info += `${status} <strong>${resultado.numero}:</strong> ${resultado.status}<br>`;
+            });
+          }
+          
+          info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
           mostrarSucesso(resultado, info);
           document.getElementById('comandoCustom').value = '';
         } else {
@@ -481,28 +617,24 @@
     }
 
     async function consultarSaldo() {
-      const saldoInfo = document.getElementById('saldoInfo');
-      const saldoValor = document.getElementById('saldoValor');
+      const saldoDisplay = document.getElementById('saldoDisplay');
 
-      saldoValor.innerHTML = '<span class="loading"></span> Consultando...';
-      saldoInfo.style.display = 'block';
+      saldoDisplay.innerHTML = '<span class="loading"></span> Carregando...';
 
       try {
         const response = await fetch('/api/saldo');
         const data = await response.json();
 
         if (data.success) {
-          saldoValor.innerHTML = `
-            <strong>SMS:</strong> R$ ${data.balance_1 || '0'} | 
-            <strong>SMS Interativo:</strong> R$ ${data.balance_2 || '0'}<br>
-            <small>Vencimento: ${data.expiration || 'N/A'}</small>
+          saldoDisplay.innerHTML = `
+            SMS: ${data.balance_1 || '0'} | Interativo: ${data.balance_2 || '0'}
           `;
         } else {
-          saldoValor.innerHTML = '❌ Erro ao consultar saldo';
+          saldoDisplay.innerHTML = '❌ Erro ao consultar';
         }
       } catch (error) {
         console.error('Erro:', error);
-        saldoValor.innerHTML = '❌ Erro de conexão';
+        saldoDisplay.innerHTML = '❌ Erro de conexão';
       }
     }
 
@@ -512,7 +644,7 @@
       const container = document.getElementById('consultaResultados');
 
       if (!startDate || !endDate) {
-        mostrarErro(container, 'Defina as datas de início e fim');
+        container.innerHTML = '<div class="result-box error">❌ Defina as datas de início e fim</div>';
         return;
       }
 
@@ -528,12 +660,10 @@
         const data = await response.json();
 
         if (data && data.messages && data.messages.length > 0) {
-          let html = `
-            <div class="section">
-              <h3>📊 Resultados do Período</h3>
-              <p><strong>Total de mensagens:</strong> ${data.messages.length}</p>
-            </div>
-          `;
+          let html = `<div style="background: white; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+            <h4>📊 Resultados do Período</h4>
+            <p><strong>Total de mensagens:</strong> ${data.messages.length}</p>
+          </div>`;
 
           data.messages.forEach((msg, index) => {
             const status = interpretarStatus(msg.status);
@@ -542,12 +672,7 @@
             html += `
               <div class="msg-item">
                 <div class="msg-header">#${index + 1} - ${data_msg}</div>
-                <div class="msg-info">
-                  <div><strong>Número:</strong> ${msg.number || '---'}</div>
-                  <div><strong>Status:</strong> ${msg.status}</div>
-                  <div><strong>ID:</strong> ${msg.id || '---'}</div>
-                  <div><strong>Operadora:</strong> ${msg.carrier || '---'}</div>
-                </div>
+                <div><strong>Número:</strong> ${msg.number || '---'}</div>
                 <div><strong>Mensagem:</strong> ${msg.content || '---'}</div>
                 <div style="margin-top: 10px;">
                   <span class="status-badge ${status.classe}">
@@ -560,15 +685,11 @@
 
           container.innerHTML = html;
         } else {
-          container.innerHTML = `
-            <div class="result-box">
-              ℹ️ Nenhuma mensagem encontrada no período.
-            </div>
-          `;
+          container.innerHTML = '<div class="result-box">ℹ️ Nenhuma mensagem encontrada no período.</div>';
         }
       } catch (error) {
         console.error('Erro:', error);
-        mostrarErro(container, 'Erro ao consultar período');
+        container.innerHTML = '<div class="result-box error">❌ Erro ao consultar período</div>';
       }
     }
 
