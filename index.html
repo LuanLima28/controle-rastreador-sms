@@ -334,6 +334,78 @@
       color: #a93226;
     }
 
+    /* NOVA SEÇÃO TCP */
+    .tcp-section {
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      border: 1px solid #bdc3c7;
+      margin-bottom: 25px;
+    }
+
+    .tcp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 10px;
+    }
+
+    .tcp-header h4 {
+      color: #2c3e50;
+      margin: 0;
+    }
+
+    .btn-limpar-tcp {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-limpar-tcp:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .tcp-status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #ecf0f1;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+
+    .tcp-status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .tcp-online { background: #27ae60; }
+    .tcp-offline { background: #e74c3c; }
+
+    .tcp-log {
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-line;
+      border: 1px solid #34495e;
+    }
+
     @media (max-width: 768px) {
       .saldo-section {
         grid-template-columns: 1fr;
@@ -345,6 +417,12 @@
       
       .content {
         padding: 15px;
+      }
+
+      .tcp-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
       }
     }
   </style>
@@ -480,6 +558,24 @@
 
       <!-- Resultados da Consulta -->
       <div id="consultaResultados"></div>
+
+      <!-- NOVA SEÇÃO TCP - RESPOSTAS DO RASTREADOR -->
+      <div class="tcp-section">
+        <div class="tcp-header">
+          <h4>📡 Respostas do Rastreador J16</h4>
+          <button class="btn-limpar-tcp" onclick="limparTcpLog()">
+            🗑️ Limpar Log
+          </button>
+        </div>
+        <div class="tcp-status" id="tcpStatus">
+          <span class="tcp-status-indicator tcp-offline" id="tcpIndicator"></span>
+          <span id="tcpStatusText">Conectando ao servidor TCP...</span>
+        </div>
+        <div class="tcp-log" id="tcpLog">Aguardando respostas do rastreador...
+Servidor TCP ativo na porta 6809
+Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
+        </div>
+      </div>
     </div>
   </div>
 
@@ -491,6 +587,9 @@
       
       document.getElementById('endDate').value = formatDateTime(agora);
       document.getElementById('startDate').value = formatDateTime(ontem);
+
+      // Inicializar WebSocket TCP
+      initTcpWebSocket();
     };
 
     function formatDateTime(date) {
@@ -557,6 +656,7 @@
           }
           
           info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
+          info += `<br>📡 <strong>Aguardando resposta TCP...</strong>`;
           mostrarSucesso(resultado, info);
         } else {
           mostrarErro(resultado, data.erro || 'Erro desconhecido');
@@ -605,6 +705,7 @@
           }
           
           info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
+          info += `<br>📡 <strong>Aguardando resposta TCP...</strong>`;
           mostrarSucesso(resultado, info);
           document.getElementById('comandoCustom').value = '';
         } else {
@@ -709,6 +810,71 @@
         texto: `Status ${status}`, 
         classe: 'status-pending' 
       };
+    }
+
+    // FUNÇÕES TCP ADICIONADAS
+    let tcpWebSocket = null;
+
+    function initTcpWebSocket() {
+      const tcpStatus = document.getElementById('tcpStatusText');
+      const tcpIndicator = document.getElementById('tcpIndicator');
+
+      try {
+        // Para Render, usar WSS (WebSocket seguro)
+        const wsUrl = window.location.protocol === 'https:' 
+          ? `wss://${window.location.hostname}` 
+          : `ws://${window.location.hostname}:8080`;
+
+        tcpWebSocket = new WebSocket(wsUrl);
+
+        tcpWebSocket.onopen = function() {
+          tcpStatus.textContent = 'Servidor TCP conectado - Porta 6809';
+          tcpIndicator.className = 'tcp-status-indicator tcp-online';
+          adicionarLogTcp('✅ Conectado ao servidor TCP');
+        };
+
+        tcpWebSocket.onmessage = function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.tipo === 'resposta_rastreador') {
+              adicionarLogTcp(`[${data.hora}] ${data.mensagem}`);
+            }
+          } catch (e) {
+            console.log('Erro ao processar mensagem WebSocket:', e);
+          }
+        };
+
+        tcpWebSocket.onclose = function() {
+          tcpStatus.textContent = 'Desconectado do servidor TCP';
+          tcpIndicator.className = 'tcp-status-indicator tcp-offline';
+          adicionarLogTcp('❌ Conexão TCP perdida - tentando reconectar...');
+          
+          // Tentar reconectar após 5 segundos
+          setTimeout(initTcpWebSocket, 5000);
+        };
+
+        tcpWebSocket.onerror = function() {
+          tcpStatus.textContent = 'Erro na conexão TCP';
+          tcpIndicator.className = 'tcp-status-indicator tcp-offline';
+          adicionarLogTcp('❌ Erro na conexão WebSocket');
+        };
+
+      } catch (error) {
+        tcpStatus.textContent = 'Erro ao conectar TCP';
+        tcpIndicator.className = 'tcp-status-indicator tcp-offline';
+        console.error('Erro WebSocket:', error);
+      }
+    }
+
+    function adicionarLogTcp(mensagem) {
+      const tcpLog = document.getElementById('tcpLog');
+      tcpLog.textContent += mensagem + '\n';
+      tcpLog.scrollTop = tcpLog.scrollHeight;
+    }
+
+    function limparTcpLog() {
+      const tcpLog = document.getElementById('tcpLog');
+      tcpLog.textContent = 'Log limpo...\nAguardando mensagens TCP...\n';
     }
   </script>
 </body>
