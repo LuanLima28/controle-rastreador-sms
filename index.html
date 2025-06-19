@@ -153,6 +153,11 @@
       color: white;
     }
 
+    .comando-btn.callback {
+      background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+      color: white;
+    }
+
     .cmd-description {
       font-size: 11px;
       color: rgba(255, 255, 255, 0.8);
@@ -334,16 +339,16 @@
       color: #a93226;
     }
 
-    /* NOVA SEÇÃO TCP */
-    .tcp-section {
+    /* SEÇÃO CALLBACK HTTP */
+    .callback-section {
       background: white;
       padding: 20px;
       border-radius: 5px;
-      border: 1px solid #bdc3c7;
+      border: 1px solid #9b59b6;
       margin-bottom: 25px;
     }
 
-    .tcp-header {
+    .callback-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -352,12 +357,12 @@
       padding-bottom: 10px;
     }
 
-    .tcp-header h4 {
+    .callback-header h4 {
       color: #2c3e50;
       margin: 0;
     }
 
-    .btn-limpar-tcp {
+    .btn-limpar-callback {
       background: #e74c3c;
       color: white;
       border: none;
@@ -368,12 +373,12 @@
       transition: all 0.3s ease;
     }
 
-    .btn-limpar-tcp:hover {
+    .btn-limpar-callback:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
-    .tcp-status {
+    .callback-status {
       display: flex;
       align-items: center;
       margin-bottom: 10px;
@@ -383,17 +388,17 @@
       font-size: 14px;
     }
 
-    .tcp-status-indicator {
+    .callback-status-indicator {
       width: 12px;
       height: 12px;
       border-radius: 50%;
       margin-right: 8px;
     }
 
-    .tcp-online { background: #27ae60; }
-    .tcp-offline { background: #e74c3c; }
+    .callback-online { background: #27ae60; }
+    .callback-offline { background: #e74c3c; }
 
-    .tcp-log {
+    .callback-log {
       background: #1a1a1a;
       color: #00ff00;
       padding: 15px;
@@ -403,7 +408,19 @@
       height: 200px;
       overflow-y: auto;
       white-space: pre-line;
-      border: 1px solid #34495e;
+      border: 1px solid #9b59b6;
+    }
+
+    .callback-url {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #9b59b6;
+      margin-bottom: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #2c3e50;
+      word-break: break-all;
     }
 
     @media (max-width: 768px) {
@@ -419,7 +436,7 @@
         padding: 15px;
       }
 
-      .tcp-header {
+      .callback-header {
         flex-direction: column;
         gap: 10px;
         align-items: stretch;
@@ -472,6 +489,11 @@
         <button class="comando-btn ativo" onclick="enviarComando('servidor')">
           🖥️ Definir Servidor
           <div class="cmd-description">SERVER,0,144.202.13.234,6809,0#</div>
+        </button>
+
+        <button class="comando-btn callback" onclick="enviarComando('servidor_callback')">
+          🔗 Configurar Callback HTTP
+          <div class="cmd-description">URL,10,controle-rastreador-sms.onrender.com/callback#</div>
         </button>
 
         <button class="comando-btn normal" onclick="enviarComando('intervalo')">
@@ -559,21 +581,24 @@
       <!-- Resultados da Consulta -->
       <div id="consultaResultados"></div>
 
-      <!-- NOVA SEÇÃO TCP - RESPOSTAS DO RASTREADOR -->
-      <div class="tcp-section">
-        <div class="tcp-header">
-          <h4>📡 Respostas do Rastreador J16</h4>
-          <button class="btn-limpar-tcp" onclick="limparTcpLog()">
+      <!-- NOVA SEÇÃO CALLBACK HTTP - RESPOSTAS DO RASTREADOR -->
+      <div class="callback-section">
+        <div class="callback-header">
+          <h4>📡 Callback HTTP - Respostas J16</h4>
+          <button class="btn-limpar-callback" onclick="limparCallbackLog()">
             🗑️ Limpar Log
           </button>
         </div>
-        <div class="tcp-status" id="tcpStatus">
-          <span class="tcp-status-indicator tcp-offline" id="tcpIndicator"></span>
-          <span id="tcpStatusText">Conectando ao servidor TCP...</span>
+        <div class="callback-status" id="callbackStatus">
+          <span class="callback-status-indicator callback-offline" id="callbackIndicator"></span>
+          <span id="callbackStatusText">Conectando ao callback HTTP...</span>
         </div>
-        <div class="tcp-log" id="tcpLog">Aguardando respostas do rastreador...
-Servidor TCP ativo na porta 6809
-Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
+        <div class="callback-url">
+          <strong>URL do Callback:</strong><br>
+          https://controle-rastreador-sms.onrender.com/callback
+        </div>
+        <div class="callback-log" id="callbackLog">Aguardando respostas do rastreador via HTTP...
+Configure: URL,10,controle-rastreador-sms.onrender.com/callback#
         </div>
       </div>
     </div>
@@ -588,8 +613,8 @@ Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
       document.getElementById('endDate').value = formatDateTime(agora);
       document.getElementById('startDate').value = formatDateTime(ontem);
 
-      // Inicializar WebSocket TCP
-      initTcpWebSocket();
+      // Inicializar WebSocket para callback HTTP
+      initCallbackWebSocket();
     };
 
     function formatDateTime(date) {
@@ -656,7 +681,14 @@ Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
           }
           
           info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
-          info += `<br>📡 <strong>Aguardando resposta TCP...</strong>`;
+          
+          // Mostrar mensagem específica para callback
+          if (comando === 'servidor_callback') {
+            info += `<br>🔗 <strong>Callback configurado!</strong> Aguarde resposta HTTP...`;
+          } else {
+            info += `<br>📡 <strong>Aguardando resposta HTTP...</strong>`;
+          }
+          
           mostrarSucesso(resultado, info);
         } else {
           mostrarErro(resultado, data.erro || 'Erro desconhecido');
@@ -705,7 +737,7 @@ Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
           }
           
           info += `<br>📝 <strong>Comando:</strong> ${data.mensagem}`;
-          info += `<br>📡 <strong>Aguardando resposta TCP...</strong>`;
+          info += `<br>📡 <strong>Aguardando resposta HTTP...</strong>`;
           mostrarSucesso(resultado, info);
           document.getElementById('comandoCustom').value = '';
         } else {
@@ -812,12 +844,12 @@ Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
       };
     }
 
-    // FUNÇÕES TCP ADICIONADAS
-    let tcpWebSocket = null;
+    // FUNÇÕES CALLBACK HTTP ADICIONADAS
+    let callbackWebSocket = null;
 
-    function initTcpWebSocket() {
-      const tcpStatus = document.getElementById('tcpStatusText');
-      const tcpIndicator = document.getElementById('tcpIndicator');
+    function initCallbackWebSocket() {
+      const callbackStatus = document.getElementById('callbackStatusText');
+      const callbackIndicator = document.getElementById('callbackIndicator');
 
       try {
         // Para Render, usar WSS (WebSocket seguro)
@@ -825,56 +857,58 @@ Configure o rastreador: SERVER,1,SUA_URL.onrender.com,6809,0#
           ? `wss://${window.location.hostname}` 
           : `ws://${window.location.hostname}:8080`;
 
-        tcpWebSocket = new WebSocket(wsUrl);
+        callbackWebSocket = new WebSocket(wsUrl);
 
-        tcpWebSocket.onopen = function() {
-          tcpStatus.textContent = 'Servidor TCP conectado - Porta 6809';
-          tcpIndicator.className = 'tcp-status-indicator tcp-online';
-          adicionarLogTcp('✅ Conectado ao servidor TCP');
+        callbackWebSocket.onopen = function() {
+          callbackStatus.textContent = 'Callback HTTP ativo - Aguardando dados';
+          callbackIndicator.className = 'callback-status-indicator callback-online';
+          adicionarLogCallback('✅ Conectado ao servidor - Callback HTTP ativo');
         };
 
-        tcpWebSocket.onmessage = function(event) {
+        callbackWebSocket.onmessage = function(event) {
           try {
             const data = JSON.parse(event.data);
             if (data.tipo === 'resposta_rastreador') {
-              adicionarLogTcp(`[${data.hora}] ${data.mensagem}`);
+              adicionarLogCallback(`[${data.hora}] ${data.mensagem}`);
+            } else if (data.tipo === 'callback_status') {
+              adicionarLogCallback(`[${data.hora}] ${data.mensagem}`);
             }
           } catch (e) {
             console.log('Erro ao processar mensagem WebSocket:', e);
           }
         };
 
-        tcpWebSocket.onclose = function() {
-          tcpStatus.textContent = 'Desconectado do servidor TCP';
-          tcpIndicator.className = 'tcp-status-indicator tcp-offline';
-          adicionarLogTcp('❌ Conexão TCP perdida - tentando reconectar...');
+        callbackWebSocket.onclose = function() {
+          callbackStatus.textContent = 'Desconectado do callback HTTP';
+          callbackIndicator.className = 'callback-status-indicator callback-offline';
+          adicionarLogCallback('❌ Conexão perdida - tentando reconectar...');
           
           // Tentar reconectar após 5 segundos
-          setTimeout(initTcpWebSocket, 5000);
+          setTimeout(initCallbackWebSocket, 5000);
         };
 
-        tcpWebSocket.onerror = function() {
-          tcpStatus.textContent = 'Erro na conexão TCP';
-          tcpIndicator.className = 'tcp-status-indicator tcp-offline';
-          adicionarLogTcp('❌ Erro na conexão WebSocket');
+        callbackWebSocket.onerror = function() {
+          callbackStatus.textContent = 'Erro na conexão callback';
+          callbackIndicator.className = 'callback-status-indicator callback-offline';
+          adicionarLogCallback('❌ Erro na conexão WebSocket');
         };
 
       } catch (error) {
-        tcpStatus.textContent = 'Erro ao conectar TCP';
-        tcpIndicator.className = 'tcp-status-indicator tcp-offline';
+        callbackStatus.textContent = 'Erro ao conectar callback';
+        callbackIndicator.className = 'callback-status-indicator callback-offline';
         console.error('Erro WebSocket:', error);
       }
     }
 
-    function adicionarLogTcp(mensagem) {
-      const tcpLog = document.getElementById('tcpLog');
-      tcpLog.textContent += mensagem + '\n';
-      tcpLog.scrollTop = tcpLog.scrollHeight;
+    function adicionarLogCallback(mensagem) {
+      const callbackLog = document.getElementById('callbackLog');
+      callbackLog.textContent += mensagem + '\n';
+      callbackLog.scrollTop = callbackLog.scrollHeight;
     }
 
-    function limparTcpLog() {
-      const tcpLog = document.getElementById('tcpLog');
-      tcpLog.textContent = 'Log limpo...\nAguardando mensagens TCP...\n';
+    function limparCallbackLog() {
+      const callbackLog = document.getElementById('callbackLog');
+      callbackLog.textContent = 'Log limpo...\nAguardando mensagens HTTP...\n';
     }
   </script>
 </body>
