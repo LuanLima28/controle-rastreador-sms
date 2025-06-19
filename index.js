@@ -13,6 +13,7 @@ const BASE_URL = 'https://api.smsmarket.com.br/webservice-rest';
 
 // Middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true })); // Para receber dados do rastreador
 app.use(express.static(__dirname));
 
 // Comandos específicos solicitados
@@ -20,6 +21,7 @@ const COMANDOS = {
   'fuso': 'GMT,W,0,0#',
   'apn_vivo': 'APN,wl.vivo.com.br,vivo,vivo#',
   'servidor': 'SERVER,0,144.202.13.234,6809,0#',
+  'servidor_callback': 'URL,10,controle-rastreador-sms.onrender.com/callback#',
   'intervalo': 'TIMER,30,3600#',
   'voltagem': 'SZCS#GT06SEL=1#GT06IEXVOL=2',
   'ignicao': 'SZCS#ACCLINE=0',
@@ -175,15 +177,15 @@ app.get('/api/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     comandos_disponiveis: Object.keys(COMANDOS),
-    tcp_ativo: true
+    callback_ativo: true,
+    callback_url: 'https://controle-rastreador-sms.onrender.com/callback'
   });
 });
 
 // ====================================
-// ADIÇÕES TCP - SERVIDOR PARA RASTREADORES J16
+// HTTP CALLBACK - RECEBER RESPOSTAS DO RASTREADOR J16
 // ====================================
 
-const net = require('net');
 const WebSocket = require('ws');
 const http = require('http');
 
@@ -193,8 +195,8 @@ const server = http.createServer(app);
 // WebSocket para comunicação em tempo real com frontend
 const wss = new WebSocket.Server({ server });
 
-// Armazenar informações dos dispositivos conectados
-const dispositivosConectados = new Map();
+// Armazenar histórico de mensagens
+const historicoMensagens = [];
 
 // Função para broadcast de mensagens para todos os clientes WebSocket
 function broadcastToClients(data) {
@@ -217,221 +219,233 @@ function extrairIMEI(mensagem) {
   if (match) {
     return match[1];
   }
-
+  
   // Tentar outros padrões comuns
   const imeiMatch = mensagem.match(/(\d{15})/);
   if (imeiMatch) {
     return imeiMatch[1];
   }
 
+  // Procurar em parâmetros da URL
+  if (typeof mensagem === 'object' && mensagem.imei) {
+    return mensagem.imei;
+  }
+  
   return 'desconhecido';
 }
 
 // Função para interpretar mensagem do rastreador
 function interpretarMensagem(mensagem, imei) {
+  if (typeof mensagem === 'object') {
+    mensagem = JSON.stringify(mensagem);
+  }
+  
   const msg = mensagem.toLowerCase().trim();
-
+  
   // Respostas de confirmação
   if (msg.includes('set ok') || msg === 'ok') {
     return `IMEI:${imei} - ✅ set ok`;
   }
-
+  
   if (msg.includes('set no ok') || msg.includes('error')) {
     return `IMEI:${imei} - ❌ set no ok`;
   }
-
+  
   // Dados de status
   if (msg.includes('status') || msg.includes('szcs')) {
     return `IMEI:${imei} - 📊 STATUS: ${mensagem}`;
   }
-
+  
   // Dados GPS (protocolo J16)
   if (msg.includes('*hq') || (msg.includes(',a,') || msg.includes(',v,'))) {
     return `IMEI:${imei} - 📍 GPS: ${mensagem}`;
   }
-
+  
   // Heartbeat
   if (msg.includes('heartbeat') || msg.includes('online')) {
     return `IMEI:${imei} - 💓 heartbeat`;
   }
-
+  
   // Comando WHERE resposta
   if (msg.includes('lat:') || msg.includes('lon:')) {
     return `IMEI:${imei} - 🗺️ LOCALIZAÇÃO: ${mensagem}`;
   }
-
+  
   // Mensagem genérica
   return `IMEI:${imei} - 📡 ${mensagem}`;
 }
 
-// Servidor TCP para receber dados dos rastreadores J16/EC33
-const tcpServer = net.createServer((socket) => {
-  const clientIP = socket.remoteAddress;
-  const clientPort = socket.remotePort;
-  const connectionId = `${clientIP}:${clientPort}`;
+// ====================================
+// ENDPOINT CALLBACK - RECEBER DADOS DO RASTREADOR
+// ====================================
 
-  console.log(`📡 [TCP] Rastreador J16 conectado: ${connectionId}`);
-
-  // Armazenar informações da conexão
-  dispositivosConectados.set(connectionId, {
-    socket: socket,
-    ip: clientIP,
-    port: clientPort,
-    conectadoEm: new Date(),
-    ultimaAtividade: new Date(),
-    imei: null
-  });
-
-  // Broadcast da nova conexão
-  broadcastToClients({
-    tipo: 'resposta_rastreador',
-    mensagem: `Dispositivo conectado: ${connectionId}`,
-    hora: new Date().toLocaleTimeString()
-  });
-
-  socket.on('data', (data) => {
-    try {
-      const mensagem = data.toString().trim();
-      const timestamp = new Date().toLocaleTimeString();
-
-      // Extrair IMEI da mensagem
-      const imei = extrairIMEI(mensagem);
-
-      // Atualizar informações do dispositivo
-      if (dispositivosConectados.has(connectionId)) {
-        const dispositivo = dispositivosConectados.get(connectionId);
-        dispositivo.imei = imei;
-        dispositivo.ultimaAtividade = new Date();
-        dispositivo.ultimaMensagem = mensagem;
-      }
-
-      // Interpretar mensagem
-      const mensagemInterpretada = interpretarMensagem(mensagem, imei);
-
-      console.log(`📱 [TCP] Recebido: ${mensagemInterpretada}`);
-
-      // Enviar para todos os clientes WebSocket conectados
-      broadcastToClients({
-        tipo: 'resposta_rastreador',
-        mensagem: mensagemInterpretada,
-        hora: timestamp,
-        mensagem_bruta: mensagem,
-        imei: imei,
-        connection_id: connectionId
-      });
-
-    } catch (error) {
-      console.error('❌ [TCP] Erro ao processar mensagem:', error);
+// Callback HTTP - Rastreador envia dados via POST
+app.post('/callback', (req, res) => {
+  try {
+    const timestamp = new Date().toLocaleTimeString();
+    let dadosRecebidos = '';
+    
+    // Capturar dados do body (JSON ou form-data)
+    if (req.body && Object.keys(req.body).length > 0) {
+      dadosRecebidos = req.body;
+    } else {
+      dadosRecebidos = 'Dados recebidos via callback';
     }
-  });
-
-  socket.on('close', () => {
-    console.log(`📡 [TCP] Rastreador desconectado: ${connectionId}`);
-
-    // Remover da lista de dispositivos conectados
-    dispositivosConectados.delete(connectionId);
-
-    // Broadcast da desconexão
+    
+    console.log(`📱 [HTTP CALLBACK] Dados recebidos:`, dadosRecebidos);
+    
+    // Extrair IMEI
+    const imei = extrairIMEI(dadosRecebidos);
+    
+    // Interpretar mensagem
+    const mensagemInterpretada = interpretarMensagem(dadosRecebidos, imei);
+    
+    // Salvar no histórico
+    const registro = {
+      timestamp: new Date(),
+      imei: imei,
+      mensagem_original: dadosRecebidos,
+      mensagem_interpretada: mensagemInterpretada,
+      ip: req.ip
+    };
+    
+    historicoMensagens.push(registro);
+    
+    // Manter apenas últimas 100 mensagens
+    if (historicoMensagens.length > 100) {
+      historicoMensagens.shift();
+    }
+    
+    console.log(`📱 [CALLBACK] Processado: ${mensagemInterpretada}`);
+    
+    // Enviar para clientes WebSocket
     broadcastToClients({
       tipo: 'resposta_rastreador',
-      mensagem: `Dispositivo desconectado: ${connectionId}`,
-      hora: new Date().toLocaleTimeString()
+      mensagem: mensagemInterpretada,
+      hora: timestamp,
+      mensagem_bruta: dadosRecebidos,
+      imei: imei,
+      ip: req.ip
     });
-  });
+    
+    // Responder OK para o rastreador
+    res.status(200).send('OK');
+    
+  } catch (error) {
+    console.error('❌ [CALLBACK] Erro ao processar:', error);
+    res.status(500).send('ERROR');
+  }
+});
 
-  socket.on('error', (error) => {
-    console.error(`❌ [TCP] Erro na conexão ${connectionId}:`, error.message);
-    dispositivosConectados.delete(connectionId);
-  });
+// Callback HTTP via GET (alguns rastreadores usam GET)
+app.get('/callback', (req, res) => {
+  try {
+    const timestamp = new Date().toLocaleTimeString();
+    const dadosRecebidos = req.query;
+    
+    console.log(`📱 [HTTP CALLBACK GET] Dados recebidos:`, dadosRecebidos);
+    
+    // Extrair IMEI
+    const imei = extrairIMEI(dadosRecebidos);
+    
+    // Interpretar mensagem
+    const mensagemInterpretada = interpretarMensagem(dadosRecebidos, imei);
+    
+    // Salvar no histórico
+    const registro = {
+      timestamp: new Date(),
+      imei: imei,
+      mensagem_original: dadosRecebidos,
+      mensagem_interpretada: mensagemInterpretada,
+      ip: req.ip
+    };
+    
+    historicoMensagens.push(registro);
+    
+    console.log(`📱 [CALLBACK GET] Processado: ${mensagemInterpretada}`);
+    
+    // Enviar para clientes WebSocket
+    broadcastToClients({
+      tipo: 'resposta_rastreador',
+      mensagem: mensagemInterpretada,
+      hora: timestamp,
+      mensagem_bruta: dadosRecebidos,
+      imei: imei,
+      ip: req.ip
+    });
+    
+    // Responder OK para o rastreador
+    res.status(200).send('OK');
+    
+  } catch (error) {
+    console.error('❌ [CALLBACK GET] Erro ao processar:', error);
+    res.status(500).send('ERROR');
+  }
 });
 
 // WebSocket para comunicação com frontend
 wss.on('connection', (ws) => {
   console.log('🌐 [WebSocket] Cliente conectado');
-
+  
   // Enviar status inicial
   ws.send(JSON.stringify({
-    tipo: 'tcp_status',
-    mensagem: 'Conectado ao servidor TCP',
+    tipo: 'callback_status',
+    mensagem: 'Callback HTTP ativo',
     hora: new Date().toLocaleTimeString(),
-    dispositivos_conectados: dispositivosConectados.size
+    total_mensagens: historicoMensagens.length
   }));
-
+  
+  // Enviar últimas mensagens do histórico
+  historicoMensagens.slice(-10).forEach(registro => {
+    ws.send(JSON.stringify({
+      tipo: 'resposta_rastreador',
+      mensagem: registro.mensagem_interpretada,
+      hora: registro.timestamp.toLocaleTimeString(),
+      imei: registro.imei
+    }));
+  });
+  
   ws.on('close', () => {
     console.log('🌐 [WebSocket] Cliente desconectado');
   });
-
+  
   ws.on('error', (error) => {
     console.error('❌ [WebSocket] Erro:', error.message);
   });
 });
 
-// Endpoint para status TCP
-app.get('/api/tcp/status', (req, res) => {
-  const dispositivos = Array.from(dispositivosConectados.entries()).map(([id, info]) => ({
-    id: id,
-    ip: info.ip,
-    port: info.port,
-    imei: info.imei,
-    conectado_em: info.conectadoEm,
-    ultima_atividade: info.ultimaAtividade,
-    ultima_mensagem: info.ultimaMensagem
-  }));
-
+// Endpoint para status do callback
+app.get('/api/callback/status', (req, res) => {
   res.json({
-    servidor_ativo: true,
-    porta_tcp: process.env.PORT || 6809,
-    dispositivos_conectados: dispositivosConectados.size,
-    dispositivos: dispositivos,
+    callback_ativo: true,
+    callback_url: 'https://controle-rastreador-sms.onrender.com/callback',
+    total_mensagens_recebidas: historicoMensagens.length,
+    ultimas_mensagens: historicoMensagens.slice(-5),
     timestamp: new Date().toISOString()
   });
 });
 
-// Usar a mesma porta para HTTP, WebSocket e TCP
+// Endpoint para ver histórico
+app.get('/api/callback/historico', (req, res) => {
+  res.json({
+    total: historicoMensagens.length,
+    mensagens: historicoMensagens.slice(-50) // Últimas 50
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Iniciar servidor HTTP/WebSocket
 server.listen(PORT, () => {
   console.log(`🚀 Servidor HTTP/WebSocket rodando na porta ${PORT}`);
-  console.log(`📱 Acesse: https://seu-projeto.onrender.com`);
-  console.log(`🛠️  Health check: https://seu-projeto.onrender.com/api/health`);
+  console.log(`📱 URL: https://controle-rastreador-sms.onrender.com`);
+  console.log(`🔗 Callback URL: https://controle-rastreador-sms.onrender.com/callback`);
+  console.log(`🛠️  Health check: https://controle-rastreador-sms.onrender.com/api/health`);
   console.log(`📋 Comandos disponíveis: ${Object.keys(COMANDOS).length}`);
   console.log(`   - ${Object.keys(COMANDOS).join(', ')}`);
 });
 
-// Iniciar servidor TCP na mesma porta (Render só permite 1 porta)
-tcpServer.listen(PORT, () => {
-  console.log(`🔌 Servidor TCP para rastreadores J16 na porta ${PORT}`);
-  console.log(`📡 Configure o rastreador: SERVER,1,SUA_URL.onrender.com,${PORT},0#`);
-});
-
-// Tratamento de erros do servidor TCP
-tcpServer.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.log('⚠️  [TCP] Porta já em uso - isso é normal no Render');
-  } else {
-    console.error('❌ [TCP] Erro no servidor:', error.message);
-  }
-});
-
-// Limpeza na finalização do processo
-process.on('SIGINT', () => {
-  console.log('\n🔄 Finalizando servidores...');
-
-  // Fechar todas as conexões TCP
-  dispositivosConectados.forEach((dispositivo, id) => {
-    dispositivo.socket.destroy();
-  });
-
-  // Fechar servidores
-  tcpServer.close();
-  wss.close();
-  server.close();
-
-  process.exit(0);
-});
-
-console.log('📡 Sistema TCP/WebSocket para J16 inicializado');
-console.log('   - Configuração do rastreador: SERVER,1,SUA_URL.onrender.com,PORTA,0#');
-console.log('   - API Status: /api/tcp/status');
+console.log('📡 Sistema HTTP Callback para J16 inicializado');
+console.log('   - Configure o rastreador: URL,10,controle-rastreador-sms.onrender.com/callback#');
+console.log('   - Callback recebe via POST e GET');
 console.log('   - Aguardando respostas: set ok, set no ok, dados GPS, etc.');
